@@ -503,6 +503,41 @@
     ]
   },
   {
+    "_id": "bd7159d9c451eddfaeb5bded",
+    "name": "Contribute to this guide",
+    "description": [
+      "<div class='col-xs-12 col-sm-10 col-sm-offset-1'>",
+      "<h3>The guide itself is programmable.  If you have a programming term you think belongs here, you're free to add it. It's a great way to learn and help future learners at the same time. Here's how:</h3>",
+      "<h4>",
+      "  <ol>",
+      "    <li>Read the instructions on our GitHub repo for how to contribute to the Free Code Camp open source software project: <a href=\"https://github.com/freecodecamp/freecodecamp#contributing\">https://github.com/freecodecamp/freecodecamp#contributing</a>.</li>",
+      "    <li>Read where it says README.MD. Regardless of your bonfire's difficulty, put it as the last bonfire in the JSON file. Change one of the numbers in the ID to ensure that your bonfire has a unique ID.</li>",
+      "    <li>In the terminal, run <code>node seed_data/seed.js</code>. Run <code>gulp</code>. You should be able to navigate to your new bonfire in the challenge map. Whenever you make a change to bonfire.json, you'll need to reseed in order to see these changes in the browser.</li>",
+      "    <li>Solved your own Bonfire. Confirmed that your tests work as expected and that your instructions are sufficiently clear.</li>",
+      "    <li>Submit a pull request to Free Code Camp's Staging branch and in the pull request body, link to a gist that has your algorithmic solution.</li>",
+      "  </ol>",
+      "</h4>",
+      "<h2>Here is a description of each of the Bonfires' fields.</h2>",
+      "<h3>Name</h3>",
+      "<p>The name of your challenge. It's OK for this to be humorous but it must be brief and relevant to the task.</p>",
+      "<h3>Difficulty</h3>",
+      "<p>Attempt to rate difficulty compared against existing bonfire challenges. A good proxy for the difficulty of a bonfire is how long it takes you to solve it. For every 15 minutes it takes, increase the difficulty. For example, a one-hour bonfire should probably be a 4.</p>",
+      "<h3>Description</h3>",
+      "<p>Separate paragraphs with a line break. Only the first paragraph is visible prior to a user before they click the the 'More information' button.</p>",
+      "<p>All necessary information must be included in the first paragraph. Write this first paragraph as succinctly as possible. Subsequent paragraphs should offer hints or details if needed.</p>",
+      "<p>If your subject matter warrants deeper understanding, you may link to Wikipedia.</p>",
+      "<h3>Challenge Seed</h3>",
+      "<p>This is where you set up what will be in the editor when the camper starts the bonfire.</p>",
+      "<h3>Tests</h3>",
+      "<p>These tests are what bring your challenge to life. Without them, we cannot confirm the accuracy of a user's submitted answer. Choose your tests wisely.</p>",
+      "<p>Bonfire tests are written using the Chai.js assertion library. Please use the should and expect syntax for end user readability. As an example of what not do to, many of the original Bonfire challenges are written with assert syntax and many of the test cases are difficult to read.</p>",
+      "<p>If your bonfire question has a lot of edge cases, you will need to write many tests for full coverage. If you find yourself writing more tests than you desire, you may consider simplifying the requirements of your bonfire challenge. For difficulty level 1 through 3, you will generally only need 2 to 4 tests.</p>",
+      "<h3>MDNlinks</h3>",
+      "<p>Take a look at <code>seed_data/bonfireMDNlinks.js</code>. If any of these concepts are relevant to your bonfire, be sure to include them. If you know of an MDN article that isn't linked here, you can add it to the bonfireMDNlinks.js file before adding it to your bonfire.</p>",
+      "</div>"
+    ]
+  },
+  {
     "_id": "bd7158d9c451eddfaeb5bdef",
     "name": "The Free Code Camp Privacy Policy",
     "description": [
