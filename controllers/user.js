@@ -10,8 +10,6 @@ var _ = require('lodash'),
   resources = require('./resources'),
   R = require('ramda');
 
-
-
 /**
  * GET /signin
  * Siginin page.
@@ -55,7 +53,7 @@ exports.postSignin = function(req, res, next) {
         return next(err);
       }
       req.flash('success', { msg: 'Success! You are logged in.' });
-      res.redirect(req.session.returnTo || '/');
+      return res.redirect(req.session.returnTo || '/');
     });
   })(req, res, next);
 };
@@ -285,17 +283,42 @@ exports.returnUser = function(req, res, next) {
       var tmpLongest = 1;
       var timeKeys = R.keys(timeObject);
 
+      user.longestStreak = 0;
       for (var i = 1; i <= timeKeys.length; i++) {
         if (moment(timeKeys[i - 1]).add(1, 'd').toString()
           === moment(timeKeys[i]).toString()) {
           tmpLongest++;
-          if (tmpLongest >  user.currentStreak) {
-            user.currentStreak = tmpLongest;
+          if (tmpLongest > user.longestStreak) {
+            user.longestStreak = tmpLongest;
           }
-          if ( user.currentStreak > user.longestStreak) {
-            user.longestStreak = user.currentStreak;
+        } else {
+          tmpLongest = 1;
+        }
+      }
+
+      timeKeys = timeKeys.reverse();
+      tmpLongest = 1;
+
+      user.currentStreak = 1;
+      var today = moment(Date.now()).format('YYYY-MM-DD');
+
+      if (moment(today).toString() === moment(timeKeys[0]).toString() ||
+          moment(today).subtract(1, 'd').toString() ===
+          moment(timeKeys[0]).toString()) {
+        for (var i = 1; i <= timeKeys.length; i++) {
+          if (moment(timeKeys[i - 1]).subtract(1, 'd').toString()
+            === moment(timeKeys[i]).toString()) {
+            debug(timeKeys[i - 1], timeKeys[i]);
+            tmpLongest++;
+            if (tmpLongest > user.currentStreak) {
+              user.currentStreak = tmpLongest;
+            }
+          } else {
+            break;
           }
         }
+      } else {
+        user.currentStreak = 1;
       }
 
       user.save(function(err) {
@@ -310,9 +333,17 @@ exports.returnUser = function(req, res, next) {
         data[(timeStamp / 1000)] = 1;
       });
 
-      //for (var i = 0; i < progressTimestamps.length; i++) {
-      //  data[(progressTimestamps[i] / 1000).toString()] = 1;
-      //}
+      if (!user.needsMigration) {
+        var currentlySolvedBonfires = user.completedBonfires;
+        user.completedBonfires =
+          resources.ensureBonfireNames(currentlySolvedBonfires);
+        user.needsMigration = true;
+        user.save(function(err) {
+          if (err) {
+            return next(err);
+          }
+        });
+      }
 
       user.currentStreak = user.currentStreak || 1;
       user.longestStreak = user.longestStreak || 1;
@@ -327,11 +358,11 @@ exports.returnUser = function(req, res, next) {
         githubProfile: user.profile.githubProfile,
         linkedinProfile: user.profile.linkedinProfile,
         codepenProfile: user.profile.codepenProfile,
+        facebookProfile: user.profile.facebookProfile,
         twitterHandle: user.profile.twitterHandle,
         bio: user.profile.bio,
         picture: user.profile.picture,
         progressTimestamps: user.progressTimestamps,
-        points: user.progressTimestamps.length,
         website1Link: user.portfolio.website1Link,
         website1Title: user.portfolio.website1Title,
         website1Image: user.portfolio.website1Image,
@@ -423,6 +454,7 @@ exports.postUpdateProfile = function(req, res, next) {
         user.profile.username = req.body.username.trim() || '';
         user.profile.location = req.body.location.trim() || '';
         user.profile.githubProfile = req.body.githubProfile.trim() || '';
+        user.profile.facebookProfile = req.body.facebookProfile.trim() || '';
         user.profile.linkedinProfile = req.body.linkedinProfile.trim() || '';
         user.profile.codepenProfile = req.body.codepenProfile.trim() || '';
         user.profile.twitterHandle = req.body.twitterHandle.trim() || '';

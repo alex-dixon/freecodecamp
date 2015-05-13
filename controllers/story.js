@@ -4,7 +4,7 @@ var R = require('ramda'),
   Story = require('./../models/Story'),
   Comment = require('./../models/Comment'),
   User = require('./../models/User'),
-  moment = require('../public/js/lib/moment/moment.js'),
+  moment = require('moment'),
   resources = require('./resources'),
   mongodb = require('mongodb'),
   MongoClient = mongodb.MongoClient,
@@ -131,13 +131,13 @@ exports.returnIndividualStory = function(req, res, next) {
         msg: "404: We couldn't find a story with that name. Please double check the name."
       });
 
-      return res.redirect('/stories/');
+      return res.redirect('/news/');
     }
 
     story = story.pop();
     var dashedNameFull = story.storyLink.toLowerCase().replace(/\s/g, '-');
     if (dashedNameFull !== dashedName) {
-      return res.redirect('../stories/' + dashedNameFull);
+      return res.redirect('../news/' + dashedNameFull);
     }
 
     var userVoted = false;
@@ -235,8 +235,18 @@ exports.upvote = function(req, res, next) {
         return next(err);
       }
       user = user.pop();
-      user.progressTimestamps.push(Date.now());
-      user.save();
+      user.progressTimestamps.push(Date.now() || 0);
+      user.save(function (err, user) {
+        req.user.save(function (err, user) {
+          if (err) {
+            return next(err);
+          }
+        });
+        req.user.progressTimestamps.push(Date.now() || 0);
+        if (err) {
+          return next(err);
+        }
+      });
     });
     return res.send(story);
   });
@@ -285,7 +295,7 @@ exports.newStory = function(req, res, next) {
       });
       return res.json({
         alreadyPosted: true,
-        storyURL: '/stories/' + story.pop().storyLink
+        storyURL: '/news/' + story.pop().storyLink
       });
     }
     resources.getURLTitle(url, processResponse);
@@ -373,6 +383,12 @@ exports.storySubmission = function(req, res, next) {
       if (err) {
         return res.status(500);
       }
+      req.user.progressTimestamps.push(Date.now() || 0);
+      req.user.save(function (err, user) {
+        if (err) {
+          return next(err);
+        }
+      });
       res.send(JSON.stringify({
         storyLink: story.storyLink.replace(/\s/g, '-').toLowerCase()
       }));
@@ -534,7 +550,7 @@ exports.storySubmission = function(req, res, next) {
                 text: [
                   'Just a quick heads-up: ' + data.author.username + ' replied to you on Camper News.',
                   'You can keep this conversation going.',
-                  'Just head back to the discussion here: http://freecodecamp.com/stories/' + data.originalStoryLink,
+                  'Just head back to the discussion here: http://freecodecamp.com/news/' + data.originalStoryLink,
                   '- the Free Code Camp Volunteer Team'
                 ].join('\n')
               };

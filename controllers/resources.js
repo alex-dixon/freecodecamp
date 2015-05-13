@@ -14,6 +14,7 @@ var async = require('async'),
   coursewares = require('../seed_data/coursewares.json'),
   fieldGuides = require('../seed_data/field-guides.json'),
   moment = require('moment'),
+  Twit = require('twit'),
   https = require('https'),
   debug = require('debug')('freecc:cntr:resources'),
   cheerio = require('cheerio'),
@@ -24,7 +25,8 @@ var async = require('async'),
  * Cached values
  */
 var allBonfireIds, allBonfireNames, allCoursewareIds, allCoursewareNames,
-  allFieldGuideIds, allFieldGuideNames, allNonprofitNames;
+  allFieldGuideIds, allFieldGuideNames, allNonprofitNames,
+  allBonfireIndexesAndNames;
 
 /**
  * GET /
@@ -185,6 +187,31 @@ module.exports = {
     });
   },
 
+  unsubscribe: function unsubscribe(req, res) {
+    User.findOne({email: req.params.email}, function(err, user) {
+      if (user) {
+        if (err) {
+          return next(err);
+        }
+        user.sendMonthlyEmail = false;
+        user.save(function () {
+          if (err) {
+            return next(err);
+          }
+          res.redirect('/unsubscribed');
+        });
+      } else {
+        res.redirect('/unsubscribed');
+      }
+    });
+  },
+
+  unsubscribed: function unsubscribed(req, res) {
+    res.render('resources/unsubscribed', {
+      title: "You have been unsubscribed"
+    });
+  },
+
   githubCalls: function(req, res) {
     var githubHeaders = {headers: {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1521.3 Safari/537.36'}, port:80 };
     request('https://api.github.com/repos/freecodecamp/freecodecamp/pulls?client_id=' + secrets.github.clientID + '&client_secret=' + secrets.github.clientSecret, githubHeaders, function(err, status1, pulls) {
@@ -277,6 +304,31 @@ module.exports = {
         });
       return allBonfireIds;
     }
+  },
+
+  bonfiresIndexesAndNames: function() {
+    if (allBonfireIndexesAndNames) {
+      return allBonfireIndexesAndNames
+    } else {
+      var obj = {};
+      bonfires.forEach(function(elem) {
+        obj[elem._id] = elem.name;
+      });
+      allBonfireIndexesAndNames = obj;
+      return allBonfireIndexesAndNames;
+    }
+  },
+
+  ensureBonfireNames: function(completedBonfires) {
+    return completedBonfires.map(function(elem) {
+      return ({
+        name: this.bonfiresIndexesAndNames()[elem._id],
+        _id: elem.id,
+        completedDate: elem.completedDate,
+        completedWith: elem.completedWith,
+        solution: elem.solution
+      });
+    }.bind(this));
   },
 
   allFieldGuideIds: function() {
@@ -407,7 +459,7 @@ module.exports = {
           var urlImage = metaImage.attr('content') ? metaImage.attr('content') : '';
           var metaTitle = $('title');
           var description = metaDescription.attr('content') ? metaDescription.attr('content') : '';
-          result.title = metaTitle.text().length < 141 ? metaTitle.text() : metaTitle.text().slice(0, 137) + " ...";
+          result.title = metaTitle.text().length < 90 ? metaTitle.text() : metaTitle.text().slice(0, 87) + "...";
           result.image = urlImage;
           result.description = description;
           callback(null, result);
@@ -469,6 +521,36 @@ module.exports = {
         }
         cb();
       });
+    }
+  },
+  codepenResources: {
+    twitter: function(req, res) {
+      // sends out random tweets about javascript
+      var T = new Twit({
+        consumer_key:         secrets.twitter.consumerKey,
+        consumer_secret:      secrets.twitter.consumerSecret,
+        access_token:         secrets.twitter.token,
+        access_token_secret:  secrets.twitter.tokenSecret
+      });
+
+      if (req.params.screenName) {
+        screenName = req.params.screenName;
+      } else {
+        screenName = 'freecodecamp';
+      }
+
+      T.get('statuses/user_timeline', {screen_name: screenName, count:10}, function(err, data, response) {
+        return res.json(data);
+      });
+    },
+    twitterFCCStream: function() {
+      // sends out a tweet stream from FCC's account
+    },
+    twitch: function() {
+      // exports information from the twitch account
+    },
+    slack: function() {
+
     }
   }
 };

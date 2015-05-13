@@ -9,6 +9,18 @@ exports.returnIndividualFieldGuide = function(req, res, next) {
 
     var fieldGuideName = dashedName.replace(/\-/g, ' ');
 
+    if (req.user) {
+      var completed = req.user.completedFieldGuides;
+
+      var uncompletedFieldGuides = resources.allFieldGuideIds().filter(function (elem) {
+        if (completed.indexOf(elem) === -1) {
+          return elem;
+        }
+      });
+      req.user.uncompletedFieldGuides = uncompletedFieldGuides;
+      req.user.save();
+    }
+
     FieldGuide.find({'name': new RegExp(fieldGuideName, 'i')}, function(err, fieldGuideFromMongo) {
         if (err) {
             next(err);
@@ -49,29 +61,21 @@ exports.showAllFieldGuides = function(req, res) {
 
 exports.returnNextFieldGuide = function(req, res, next) {
   if (!req.user) {
-    return res.redirect('../field-guide/how-do-i-use-this-guide?');
+    return res.redirect('/field-guide/how-do-i-use-this-guide?');
   }
 
-  var completed = req.user.completedFieldGuides;
-
-  var uncompletedFieldGuides = resources.allFieldGuideIds().filter(function (elem) {
-    if (completed.indexOf(elem) === -1) {
-      return elem;
-    }
-  });
-  req.user.uncompletedFieldGuides = uncompletedFieldGuides;
-  req.user.save();
-
-  var displayedFieldGuides =  FieldGuide.find({'_id': uncompletedFieldGuides[0]});
+  var displayedFieldGuides =  FieldGuide.find({'_id': req.user.uncompletedFieldGuides[0]});
   displayedFieldGuides.exec(function(err, fieldGuide) {
     if (err) {
       return next(err);
     }
     fieldGuide = fieldGuide.pop();
     if (typeof fieldGuide === 'undefined') {
-      req.flash('success', {
-        msg: "You've read all our current Field Guide entries. You can contribute to our Field Guide <a href='https://github.com/FreeCodeCamp/freecodecamp/blob/master/seed_data/field-guides.json'>here</a>."
-      });
+      if (req.user.completedFieldGuides.length > 0) {
+        req.flash('success', {
+          msg: "You've read all our current Field Guide entries. You can contribute to our Field Guide <a href='https://github.com/FreeCodeCamp/freecodecamp/blob/master/seed_data/field-guides.json'>here</a>."
+        });
+      }
       return res.redirect('../field-guide/how-do-i-use-this-guide?');
     }
     var nameString = fieldGuide.name.toLowerCase().replace(/\s/g, '-');

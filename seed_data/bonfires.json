@@ -351,7 +351,8 @@
       "Perform a search and replace on the sentence using the arguments provided and return the new sentence.",
       "First argument is the sentence the perform the search and replace on.",
       "Second argument is the word that you will be replacing (before).",
-      "Third argument is what you will be replacing the second argument with (after)."
+      "Third argument is what you will be replacing the second argument with (after).",
+      "NOTE: Preserve the case of the original word when you are replacing it. For example if you mean to replace the word 'Book' with the word 'dog', it should be replaced as 'Dog'"
     ],
     "challengeSeed": "function replace(str, before, after) {\n return str;\r\n}\n\nreplace(\"A quick brown fox jumped over the lazy dog\", \"jumped\", \"leaped\");",
     "MDNlinks" : ["Array.splice()", "String.replace()", "Array.join()"]
@@ -517,7 +518,7 @@
     "name": "Smallest Common Multiple",
     "difficulty": "2.11",
     "description": [
-      "Find the smallest number that evenly divides all numbers in the provided range.",
+      "Find the smallest number that is evenly divisible by all numbers in the provided range.",
       "The range will be an array of two numbers that will not necessarily be in numerical order."
     ],
     "challengeSeed": "function smallestCommons(arr) {\n  return arr;\r\n}\r\n\n\nsmallestCommons([1,5]);",
@@ -628,13 +629,15 @@
     "description": [
       "Create a function that sums two arguments together. If only one argument is provided, return a function that expects one additional argument and will return the sum.",
       "For example, add(2, 3) should return 5, and add(2) should return a function that is waiting for an argument so that <code>var sum2And = add(2); return sum2And(3); // 5</code>",
-      "If either argument isn't a valid numbers, return undefined"
+      "If either argument isn't a valid number, return undefined."
     ],
     "challengeSeed": "function add() {\n  return false;\n}\n\nadd(2,3);",
     "tests": [
       "expect(add(2, 3)).to.equal(5);",
       "expect(add(2)(3)).to.equal(5);",
-      "expect(add('http://bit.ly/IqT6zt')).to.be.undefined;"
+      "expect(add('http://bit.ly/IqT6zt')).to.be.undefined;",
+      "expect(add(2, '3')).to.be.undefined;",
+      "expect(add(2)([3])).to.be.undefined;"
     ],
     "MDNlinks": ["Global Function Object", "Arguments object"]
   },

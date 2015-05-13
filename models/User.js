@@ -64,6 +64,10 @@ var userSchema = new mongoose.Schema({
         twitterHandle: {
             type: String,
             default: ''
+        },
+        facebookProfile: {
+          type: String,
+          default: ''
         }
     },
     portfolio: {
@@ -139,8 +143,12 @@ var userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  needsSomeDataModeled: { type: Boolean, default: false},
+
+  // needsMigration has been deprecated, use needsSomeDataModeled
   needsMigration: { type: Boolean, default: true },
   finishedWaypoints: { type: Boolean, default: false },
+  sendMonthlyEmail: { type: Boolean, default: true },
   challengesHash: {}
 });
 

@@ -1,6 +1,3 @@
-if (process.env.NODE_ENV !== 'development') {
-  require('newrelic');
-}
 require('dotenv').load();
 // handle uncaught exceptions. Forever will restart process on shutdown
 process.on('uncaughtException', function (err) {
@@ -24,14 +21,17 @@ var express = require('express'),
   methodOverride = require('method-override'),
   bodyParser = require('body-parser'),
   helmet = require('helmet'),
+  frameguard = require('frameguard'),
+  csp = require('helmet-csp'),
   MongoStore = require('connect-mongo')(session),
   flash = require('express-flash'),
   path = require('path'),
   mongoose = require('mongoose'),
   passport = require('passport'),
   expressValidator = require('express-validator'),
-  connectAssets = require('connect-assets'),
   request = require('request'),
+  forceDomain = require('forcedomain'),
+  lessMiddleware = require('less-middleware'),
 
     /**
      * Controllers (route handlers).
@@ -48,7 +48,7 @@ var express = require('express'),
     /**
      *  Stories
      */
-    storyController = require('./controllers/story');
+    storyController = require('./controllers/story'),
 
     /**
      * API keys and Passport configuration.
@@ -80,31 +80,14 @@ app.set('port', process.env.PORT || 3000);
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
-
 if (process.env.NODE_ENV === 'production') {
-  app.all(/.*/, function (req, res, next) {
-    var host = req.header('host');
-    var originalUrl = req['originalUrl'];
-    if (host.match(/^www\..*/i)) {
-      next();
-    } else {
-      res.redirect(301, "http://www." + host + originalUrl);
-    }
-  });
+  app.use(forceDomain({
+    hostname: 'www.freecodecamp.com'
+  }));
 }
 
 app.use(compress());
-var oneYear = 31557600000;
-app.use(express.static(__dirname + '/public', {maxAge: oneYear}));
-app.use(connectAssets({
-    paths: [
-        path.join(__dirname, 'public/css'),
-        path.join(__dirname, 'public/js')
-    ],
-    build: false,
-    buildDir: false,
-    helperContext: app.locals
-}));
+app.use(lessMiddleware(__dirname + '/public'));
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -133,16 +116,22 @@ app.disable('x-powered-by');
 
 app.use(helmet.xssFilter());
 app.use(helmet.noSniff());
-app.use(helmet.xframe());
+app.use(helmet.frameguard());
 app.use(function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers',
+               'Origin, X-Requested-With, Content-Type, Accept'
+              );
     next();
 });
 
 var trusted = [
   "'self'",
+  'blob:',
   '*.freecodecamp.com',
+  'http://www.freecodecamp.com',
+  'ws://freecodecamp.com/',
+  'ws://www.freecodecamp.com/',
   '*.gstatic.com',
   '*.google-analytics.com',
   '*.googleapis.com',
@@ -154,7 +143,6 @@ var trusted = [
   '*.twimg.com',
   "'unsafe-eval'",
   "'unsafe-inline'",
-  '*.rafflecopter.com',
   '*.bootstrapcdn.com',
   '*.cloudflare.com',
   'https://*.cloudflare.com',
@@ -169,42 +157,25 @@ var trusted = [
   '*.youtube.com',
   '*.jsdelivr.net',
   'https://*.jsdelivr.net',
-  '*.togetherjs.com',
-  'https://*.togetherjs.com',
-  'wss://hub.togetherjs.com',
   '*.ytimg.com',
-  'wss://fcctogether.herokuapp.com',
   '*.bitly.com',
   'http://cdn.inspectlet.com/',
   'http://hn.inspectlet.com/'
 ];
 
-app.use(helmet.contentSecurityPolicy({
+app.use(helmet.csp({
     defaultSrc: trusted,
     scriptSrc: [
         '*.optimizely.com',
         '*.aspnetcdn.com',
-        '*.d3js.org',
+        '*.d3js.org'
     ].concat(trusted),
     'connect-src': [
-        'ws://*.rafflecopter.com',
-        'wss://*.rafflecopter.com',
-        'https://*.rafflecopter.com',
-        'ws://www.freecodecamp.com',
-        'http://www.freecodecamp.com'
     ].concat(trusted),
     styleSrc: trusted,
     imgSrc: [
-        '*.evernote.com',
-        '*.amazonaws.com',
-        'data:',
-        '*.licdn.com',
-        '*.gravatar.com',
-        '*.akamaihd.net',
-        'graph.facebook.com',
-        '*.githubusercontent.com',
-        '*.googleusercontent.com',
-        '*' /* allow all input since we have user submitted images for public profile*/
+          /* allow all input since we have user submitted images for public profile*/
+        '*'
     ].concat(trusted),
     fontSrc: ['*.googleapis.com'].concat(trusted),
     mediaSrc: [
@@ -212,11 +183,11 @@ app.use(helmet.contentSecurityPolicy({
         '*.twitter.com'
     ].concat(trusted),
     frameSrc: [
+
         '*.gitter.im',
         '*.gitter.im https:',
         '*.vimeo.com',
         '*.twitter.com',
-        '*.rafflecopter.com',
         '*.ghbtns.com'
     ].concat(trusted),
     reportOnly: false, // set to true if you only want to report errors
@@ -230,6 +201,8 @@ app.use(function (req, res, next) {
   next();
 });
 
+app.use(express.static(__dirname + '/public', {maxAge: 86400000 }));
+
 app.use(function (req, res, next) {
     // Remember original destination before login.
     var path = req.path.split('/')[1];
@@ -242,12 +215,6 @@ app.use(function (req, res, next) {
     next();
 });
 
-app.use(
-  express.static(path.join(__dirname, 'public'), {maxAge: 31557600000})
-);
-
-app.use(express.static(__dirname + '/public', { maxAge: 86400000 }));
-
 /**
  * Main routes.
  */
@@ -255,7 +222,7 @@ app.use(express.static(__dirname + '/public', { maxAge: 86400000 }));
 app.get('/', homeController.index);
 
 app.get('/nonprofit-project-instructions', function(req, res) {
-    res.redirect(301, '/field-guide/nonprofit-project-instructions');
+    res.redirect(301, '/field-guide/how-do-free-code-camp\'s-nonprofit-projects-work');
 });
 
 app.get('/chat', resourcesController.chat);
@@ -264,21 +231,23 @@ app.get('/twitch', resourcesController.twitch);
 
 // Agile Project Manager Onboarding
 
-app.get('/pmi-acp-agile-project-managers', resourcesController.agileProjectManagers);
+app.get('/pmi-acp-agile-project-managers',
+        resourcesController.agileProjectManagers);
 
 app.get('/agile', function(req, res) {
   res.redirect(301, '/pmi-acp-agile-project-managers');
 });
 
-app.get('/pmi-acp-agile-project-managers-form', resourcesController.agileProjectManagersForm);
+app.get('/pmi-acp-agile-project-managers-form',
+        resourcesController.agileProjectManagersForm);
 
 // Nonprofit Onboarding
 
 app.get('/nonprofits', resourcesController.nonprofits);
 
+app.get('/nonprofits/getNonprofitList', nonprofitController.showAllNonprofits);
+
 app.get('/nonprofits-form', resourcesController.nonprofitsForm);
-
-
 
 app.get('/map', challengeMapController.challengeMap);
 
@@ -311,9 +280,6 @@ app.get('/nodeschool-challenges', function(req, res) {
 });
 
 
-app.get('/news', function(req, res) {
-  res.redirect(301, '/stories/hot');
-});
 app.get('/learn-to-code', challengeMapController.challengeMap);
 app.get('/about', function(req, res) {
   res.redirect(301, '/map');
@@ -366,7 +332,7 @@ app.post(
 );
 
 app.get('/privacy', function(req, res) {
-  res.redirect(301, '/field-guide/the-free-code-camp-privacy-policy');
+  res.redirect(301, '/field-guide/what-is-the-free-code-camp-privacy-policy?');
 });
 
 app.get('/api/slack', function(req, res) {
@@ -408,7 +374,7 @@ app.get('/api/slack', function(req, res) {
           });
           return res.redirect('back');
         }
-      })
+      });
     } else {
       req.flash('notice', {
         msg: "Before we can send your Slack invite, we need your email address. Please update your profile information here."
@@ -434,13 +400,6 @@ app.get(
 app.get(
   '/stories/recentStories',
   storyController.recentJSON
-);
-
-app.get(
-  '/stories/',
-  function(req, res) {
-    res.redirect(302, '/stories/hot');
-  }
 );
 
 app.get(
@@ -484,19 +443,8 @@ app.post(
 );
 
 app.get(
-  '/stories/hot',
+  '/news/',
   storyController.hot
-);
-
-app.get(
-  '/stories/recent',
-  storyController.recent
-);
-
-
-app.get(
-  '/stories/search',
-  storyController.search
 );
 
 app.post(
@@ -505,13 +453,23 @@ app.post(
 );
 
 app.get(
-  '/stories/:storyName',
+  '/news/:storyName',
   storyController.returnIndividualStory
 );
 
 app.post(
   '/stories/upvote/',
   storyController.upvote
+);
+
+app.get(
+  '/unsubscribe/:email',
+  resourcesController.unsubscribe
+);
+
+app.get(
+  '/unsubscribed',
+  resourcesController.unsubscribed
 );
 
 app.all('/account', passportConf.isAuthenticated);
@@ -527,6 +485,8 @@ app.get('/api/github', resourcesController.githubCalls);
 app.get('/api/blogger', resourcesController.bloggerCalls);
 
 app.get('/api/trello', resourcesController.trelloCalls);
+
+app.get('/api/codepen/twitter/:screenName', resourcesController.codepenResources.twitter);
 
 /**
  * Bonfire related routes
@@ -562,7 +522,9 @@ app.post('/completed-bonfire/', bonfireController.completedBonfire);
  */
 
 
-app.get('/field-guide/:fieldGuideName', fieldGuideController.returnIndividualFieldGuide);
+app.get('/field-guide/:fieldGuideName',
+        fieldGuideController.returnIndividualFieldGuide
+       );
 
 app.get('/field-guide/', fieldGuideController.returnNextFieldGuide);
 
@@ -586,9 +548,13 @@ app.post('/completed-zipline-or-basejump',
   coursewareController.completedZiplineOrBasejump);
 
 // Unique Check API route
-app.get('/api/checkUniqueUsername/:username', userController.checkUniqueUsername);
+app.get('/api/checkUniqueUsername/:username',
+        userController.checkUniqueUsername
+       );
 
-app.get('/api/checkExistingUsername/:username', userController.checkExistingUsername);
+app.get('/api/checkExistingUsername/:username',
+        userController.checkExistingUsername
+       );
 
 app.get('/api/checkUniqueEmail/:email', userController.checkUniqueEmail);
 
